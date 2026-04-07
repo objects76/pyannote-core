@@ -136,7 +136,8 @@ class Notebook:
 
         self._style_generator = cycle(product(linestyle, linewidth, colors))
         self._style: Dict[Optional[Label], LabelStyle] = {
-            None: ("solid", 1, (0.0, 0.0, 0.0))
+            None: ("solid", 1, (0.0, 0.0, 0.0)),
+            "INTER": ("solid", 1, (0.5, 0.5, 0.5)),
         }
         del self.crop
         del self.width
@@ -194,6 +195,9 @@ class Notebook:
             return
 
         linestyle, linewidth, color = self[label]
+        active = getattr(self, "active_track", None) # jjkim
+        if active == (segment, str(label)):
+            linewidth = linewidth * 2
 
         # draw segment
         ax.hlines(
@@ -335,6 +339,8 @@ class Notebook:
                 borderaxespad=0.0,
                 frameon=False,
             )
+        if uri := annotation.uri:
+            ax.set_title(uri, loc="right", fontsize=15, fontweight="bold")  # + jjkim
 
     def plot_feature(
         self, feature: SlidingWindowFeature, ax=None, time=True, ylim=None
@@ -351,7 +357,15 @@ class Notebook:
         start = max(0, start)
         stop = min(stop, n)
         t = window[0].middle + window.step * np.arange(start, stop)
+
         data = feature[start:stop]
+
+        # 먼저 원본 범위로 offset 크기 결정: jjkim
+        m = np.nanmin(data)
+        M = np.nanmax(data)
+        offset_step = (M - m) * 0.03
+        offsets = offset_step * np.arange(dimension)
+        data = data + offsets[np.newaxis, :]
 
         if ylim is None:
             m = np.nanmin(data)
@@ -400,6 +414,8 @@ def repr_annotation(annotation: Annotation):
 
     figsize = plt.rcParams["figure.figsize"]
     plt.rcParams["figure.figsize"] = (notebook.width, 2)
+    plt.rcParams["figure.figsize"] = (notebook.width, 1.5)  # jjkim
+
     fig, ax = plt.subplots()
     notebook.plot_annotation(annotation, ax=ax)
     data = print_figure(fig, "png")
