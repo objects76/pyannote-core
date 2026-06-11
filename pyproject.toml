@@ -7,9 +7,7 @@ authors = [
 ]
 requires-python = ">=3.10"
 
-dynamic = [
-  "version",
-]
+version = "6.0.2"
 
 dependencies = [
     "numpy>=2.0",
@@ -34,7 +32,7 @@ doc = [
 ]
 
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
