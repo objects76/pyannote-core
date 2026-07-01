@@ -418,6 +418,9 @@ def repr_annotation(annotation: Annotation):
 
     fig, ax = plt.subplots()
     notebook.plot_annotation(annotation, ax=ax)
+    if background := getattr(annotation, "background", None):  # +jjkim
+        fig.set_facecolor(background)  # +jjkim
+        ax.set_facecolor(background)  # +jjkim
     data = print_figure(fig, "png")
     plt.close(fig)
     plt.rcParams["figure.figsize"] = figsize
