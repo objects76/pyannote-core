@@ -100,8 +100,10 @@ try:
     from IPython.core.pylabtools import print_figure
 except Exception as e:
     pass
+import re  # +jjkim
+import zlib  # +jjkim
 import numpy as np
-from itertools import cycle, product, groupby
+from itertools import product, groupby
 from .segment import Segment, SlidingWindow
 from .timeline import Timeline
 from .annotation import Annotation
@@ -134,7 +136,9 @@ class Notebook:
         cm = get_cmap("Set1")
         colors = [cm(1.0 * i / 8) for i in range(9)]
 
-        self._style_generator = cycle(product(linestyle, linewidth, colors))
+        # +jjkim: materialize styles so a label maps to a *stable* style by index
+        # (same label -> same color across different annotations)
+        self._styles = list(product(linestyle, linewidth, colors))
         self._style: Dict[Optional[Label], LabelStyle] = {
             None: ("solid", 1, (0.0, 0.0, 0.0)),
             "INTER": ("solid", 1, (0.5, 0.5, 0.5)),
@@ -168,10 +172,25 @@ class Notebook:
     def width(self):
         self._width = 20
 
+    @staticmethod
+    def _label_index(label: Label) -> int:  # +jjkim
+        """Map a label to a stable index so the same label -> same color.
+
+        Uses the label's trailing number when present ("SPEAKER_03" -> 3,
+        "spk06" -> 6); otherwise a stable CRC of the label string.
+        """
+        text = str(label)
+        m = re.search(r"(\d+)\s*$", text)
+        return int(m.group(1)) if m else zlib.crc32(text.encode("utf-8"))
+
     def __getitem__(self, label: Label) -> LabelStyle:
         """Get line style for a given label"""
         if label not in self._style:
-            self._style[label] = next(self._style_generator)
+            # +jjkim: derive style from the label itself so the same label
+            # renders in the same color across different annotations
+            self._style[label] = self._styles[
+                self._label_index(label) % len(self._styles)
+            ]
         return self._style[label]
 
     def setup(self, ax=None, ylim=(0, 1), yaxis=False, time=True):
